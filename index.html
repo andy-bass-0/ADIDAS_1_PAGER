@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1_PLANE // ANDY BASS</title>
+    <!-- Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+        body { 
+            font-family: 'Space Mono', monospace; 
+            margin: 0;
+            padding: 0;
+            background-color: white;
+        }
+        canvas { display: block; }
+    </style>
+</head>
+<body class="bg-white overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const XIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+        const RotateIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>;
+        const HandIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path></svg>;
+
+        const BIO_NODES = [
+            { 
+                id: 'BIO_01', 
+                title: 'NEW_HEIGHTS', 
+                x: -25, y: 15, z: 5, 
+                img: 'https://github.com/andy-bass-0/my-portfolio/blob/main/CB719068-B0F4-4DA4-BDA9-6BFB0147B7D6.jpg?raw=true', 
+                desc: 'Pushing to the summit of MT Whitney. 1 of 3 14,000+ ft peaks I summited in 2025.'
+            },
+            { 
+                id: 'BIO_02', 
+                title: 'CAMPUS_COMMUTE', 
+                x: 20, y: -15, z: 8, 
+                img: 'https://github.com/andy-bass-0/my-portfolio/blob/main/R0001321%20copy.jpg?raw=true',
+                desc: "My trusty steed on the UC Berkeley campus. My dad’s old blue bike grounding me providing pedal-powered relief between lectures."
+            },
+            { 
+                id: 'BIO_03', 
+                title: 'MT_BACHELOR', 
+                x: -15, y: -20, z: 12, 
+                img: 'https://github.com/andy-bass-0/my-portfolio/blob/main/R0000487.jpg?raw=true',
+                desc: 'Skiing, my greatest source of inspiration, on MT Bachelor. Exploring the west coast while taking the long way home on my drive to Colorado.'
+            },
+            { 
+                id: 'BIO_04', 
+                title: 'NEURO_OPS', 
+                x: 25, y: 22, z: 6, 
+                img: 'https://github.com/andy-bass-0/my-portfolio/blob/main/IMG_7691.JPG?raw=true',
+                desc: 'Dissecting mouse brains at UCSF. Encouraged and trained by my lab partners to work with steady hands and respect for the process.'
+            },
+            { 
+                id: 'BIO_05', 
+                title: 'MY_SOUNDTRACK', 
+                x: 5, y: 8, z: 15, 
+                img: 'https://github.com/andy-bass-0/my-repository/blob/main/Screenshot%202026-01-08%20at%2011.24.57.png?raw=true',
+                desc: "Kooky costumes from a Dead & Co. show last summer. A lyric I live by: ‘Ain’t nobody messin’ with you, but you.’"
+            }
+        ];
+
+        function App() {
+            const mountRef = useRef(null);
+            const [selectedNode, setSelectedNode] = useState(null);
+            const [mode, setMode] = useState('ORBIT');
+            const modeRef = useRef('ORBIT');
+            const selectedNodeRef = useRef(null);
+
+            useEffect(() => {
+                if (!mountRef.current) return;
+
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0xffffff); 
+                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(35, 35, 40);
+                camera.lookAt(0, 0, 0);
+
+                const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                mountRef.current.appendChild(renderer.domElement);
+
+                const worldGroup = new THREE.Group();
+                scene.add(worldGroup);
+
+                const mainGrid = new THREE.GridHelper(100, 50, 0x3b82f6, 0xe5e7eb);
+                mainGrid.rotation.x = Math.PI / 2;
+                mainGrid.material.transparent = true;
+                mainGrid.material.opacity = 0.15;
+                worldGroup.add(mainGrid);
+
+                const clickableObjects = [];
+                BIO_NODES.forEach(pt => {
+                    const group = new THREE.Group();
+                    group.position.set(pt.x, pt.y, pt.z);
+                    const ring = new THREE.Mesh(new THREE.RingGeometry(0.8, 1.2, 32), new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide }));
+                    ring.userData = { id: pt.id, data: pt };
+                    group.add(ring);
+                    clickableObjects.push(ring);
+                    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 12), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+                    dot.userData = { id: pt.id, data: pt };
+                    group.add(dot);
+                    clickableObjects.push(dot);
+                    worldGroup.add(group);
+                });
+
+                let isDragging = false;
+                let rotation = { x: 0.5, y: 0.5 };
+                let pan = { x: 0, y: 0 };
+                const mouse = new THREE.Vector2();
+                const raycaster = new THREE.Raycaster();
+
+                const onMouseDown = (e) => { if (!e.target.closest('.pointer-events-auto')) isDragging = true; };
+                const onMouseMove = (e) => {
+                    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                    raycaster.setFromCamera(mouse, camera);
+                    const intersects = raycaster.intersectObjects(clickableObjects);
+                    if (mountRef.current) mountRef.current.style.cursor = intersects.length > 0 ? 'pointer' : 'default';
+                    if (isDragging) {
+                        if (modeRef.current === 'ORBIT') {
+                            rotation.y += e.movementX * 0.005;
+                            rotation.x += e.movementY * 0.005;
+                        } else {
+                            pan.x += e.movementX * 0.1;
+                            pan.y -= e.movementY * 0.1;
+                        }
+                    }
+                };
+                const onMouseUp = (e) => {
+                    if (isDragging && Math.abs(e.movementX) < 5 && Math.abs(e.movementY) < 5) {
+                        raycaster.setFromCamera(mouse, camera);
+                        const intersects = raycaster.intersectObjects(clickableObjects);
+                        if (intersects.length > 0) {
+                            const nodeData = intersects[0].object.userData.data;
+                            setSelectedNode(nodeData);
+                            selectedNodeRef.current = nodeData;
+                        }
+                    }
+                    isDragging = false;
+                };
+
+                window.addEventListener('mousedown', onMouseDown);
+                window.addEventListener('mouseup', onMouseUp);
+                window.addEventListener('mousemove', onMouseMove);
+                
+                const animate = () => {
+                    requestAnimationFrame(animate);
+                    worldGroup.rotation.x += (rotation.x - worldGroup.rotation.x) * 0.05;
+                    worldGroup.rotation.y += (rotation.y - worldGroup.rotation.y) * 0.05;
+                    worldGroup.position.x += (pan.x - worldGroup.position.x) * 0.05;
+                    worldGroup.position.y += (pan.y - worldGroup.position.y) * 0.05;
+                    clickableObjects.forEach(obj => {
+                        const isSelected = selectedNodeRef.current && obj.userData.id === selectedNodeRef.current.id;
+                        obj.material.color.set(isSelected ? 0x3b82f6 : 0x000000);
+                        if (isSelected) {
+                            obj.parent.scale.setScalar(1.2 + Math.sin(Date.now() * 0.005) * 0.1);
+                        } else {
+                            obj.parent.scale.setScalar(1);
+                        }
+                    });
+                    renderer.render(scene, camera);
+                };
+                animate();
+
+                const handleResize = () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                };
+                window.addEventListener('resize', handleResize);
+
+                return () => {
+                    window.removeEventListener('mousedown', onMouseDown);
+                    window.removeEventListener('mouseup', onMouseUp);
+                    window.removeEventListener('mousemove', onMouseMove);
+                    window.removeEventListener('resize', handleResize);
+                };
+            }, []);
+
+            useEffect(() => { modeRef.current = mode; }, [mode]);
+            useEffect(() => { selectedNodeRef.current = selectedNode; }, [selectedNode]);
+
+            return (
+                <div className="h-screen w-screen bg-white text-black font-mono uppercase overflow-hidden relative selection:bg-black selection:text-white">
+                    <div ref={mountRef} className="absolute inset-0 z-0" />
+                    
+                    <div className="absolute inset-0 pointer-events-none z-20 flex flex-col justify-between p-6">
+                        <div className="flex justify-between items-start pointer-events-none">
+                            <div className="pointer-events-auto bg-black text-white p-4 border-2 border-black">
+                                <h1 className="font-black text-xl italic tracking-[0.2em] leading-none">1_PLANE</h1>
+                            </div>
+                            <div className="pointer-events-auto flex gap-1">
+                                <button onClick={() => setMode('ORBIT')} className={`p-3 border-2 border-black transition-all ${mode === 'ORBIT' ? 'bg-black text-white' : 'bg-white hover:bg-stone-100'}`}><RotateIcon /></button>
+                                <button onClick={() => setMode('PAN')} className={`p-3 border-2 border-black transition-all ${mode === 'PAN' ? 'bg-black text-white' : 'bg-white hover:bg-stone-100'}`}><HandIcon /></button>
+                            </div>
+                        </div>
+
+                        {selectedNode && (
+                            <div className="absolute right-6 top-[100px] w-[85vw] max-w-[480px] pointer-events-auto">
+                                <div className="border-2 border-black bg-white flex flex-col overflow-hidden shadow-xl">
+                                    <div className="p-3 flex justify-between items-center shrink-0 border-b-2 border-black bg-white relative">
+                                        <h2 className="text-lg font-black tracking-tighter leading-none pr-10">{selectedNode.title}</h2>
+                                        <button onClick={() => setSelectedNode(null)} className="absolute top-0 right-0 w-10 h-10 bg-black text-white hover:bg-red-600 transition-colors flex items-center justify-center border-l-2 border-b-2 border-black"><XIcon /></button>
+                                    </div>
+                                    <div className="w-full aspect-square bg-stone-50 overflow-hidden border-b-2 border-black flex items-center justify-center p-2">
+                                        <img 
+                                            src={selectedNode.img} 
+                                            alt={selectedNode.title} 
+                                            className="max-w-full max-h-full object-contain grayscale hover:grayscale-0 transition-all duration-500 cursor-crosshair" 
+                                        />
+                                    </div>
+                                    <div className="p-4 bg-white">
+                                        <p className="text-[13px] normal-case leading-snug text-black font-medium">{selectedNode.desc}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex justify-between items-end pointer-events-none">
+                            <div className="pointer-events-auto border-2 border-black bg-white p-3 px-5">
+                                <div className="flex gap-8 text-[10px] font-black">
+                                    <span>ANDY_BASS</span>
+                                    <span>ALL .jpg CAPTURED 2025</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
